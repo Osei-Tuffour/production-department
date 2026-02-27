@@ -401,29 +401,61 @@
             y += 10;
             doc.setFontSize(14);
             doc.text('Daily Breakdown', 20, y);
-            y += 8;
+            y += 10;
             doc.setFontSize(10);
-            // table header
-            doc.text('No.', 10, y);
-            doc.text('Day', 30, y);
-            doc.text('Date', 70, y);
-            doc.text('Bitters', 110, y);
-            doc.text('Ginger', 150, y);
-            doc.text('Employees', 190, y);
-            doc.text('Prod.', 230, y);
-            y += 5;
+
+            // Table configuration
+            const tableStartX = 8;
+            const tableStartY = y;
+            const colWidths = [12, 20, 38, 28, 28, 38, 20]; // No., Day, Date, Bitters, Ginger, Employees, Prod.
+            const colLabels = ['No.', 'Day', 'Date', 'Bitters', 'Ginger', 'Employees', 'Prod.'];
+            const rowHeight = 7;
+            let currentY = tableStartY;
+
+            // Draw header background
+            doc.setFillColor(200, 200, 200);
+            let xPos = tableStartX;
+            for (let i = 0; i < colWidths.length; i++) {
+                doc.rect(xPos, currentY, colWidths[i], rowHeight, 'F');
+                xPos += colWidths[i];
+            }
+
+            // Draw header borders and text
+            doc.setDrawColor(0);
+            doc.setLineWidth(0.5);
+            xPos = tableStartX;
+            for (let i = 0; i < colWidths.length; i++) {
+                doc.rect(xPos, currentY, colWidths[i], rowHeight);
+                doc.text(colLabels[i], xPos + 1, currentY + 4);
+                xPos += colWidths[i];
+            }
+            currentY += rowHeight;
+
+            // Draw data rows
             currentWeeklyData.weeklyRecords.forEach((rec, index) => {
+                if (currentY > 270) {
+                    doc.addPage();
+                    currentY = 20;
+                }
                 const dayName = new Date(rec.date).toLocaleDateString('en-US', { weekday: 'short' });
-                if (y > 270) { doc.addPage(); y = 20; }
-                doc.text((index+1).toString(), 10, y);
-                doc.text(dayName, 30, y);
-                doc.text(formatDate(rec.date), 70, y);
-                doc.text(rec.bittersQuantity.toFixed(1), 110, y);
-                doc.text(rec.gingerQuantity.toFixed(1), 150, y);
-                doc.text(rec.employees.toString(), 190, y);
-                const prod = ((rec.bittersQuantity + rec.gingerQuantity) / rec.employees).toFixed(2);
-                doc.text(prod, 230, y);
-                y += 5;
+                const rowData = [
+                    (index+1).toString(),
+                    dayName,
+                    formatDate(rec.date),
+                    rec.bittersQuantity.toFixed(1),
+                    rec.gingerQuantity.toFixed(1),
+                    rec.employees.toString(),
+                    ((rec.bittersQuantity + rec.gingerQuantity) / rec.employees).toFixed(2)
+                ];
+
+                // Draw cell borders and text
+                xPos = tableStartX;
+                for (let i = 0; i < colWidths.length; i++) {
+                    doc.rect(xPos, currentY, colWidths[i], rowHeight);
+                    doc.text(rowData[i], xPos + 1, currentY + 4);
+                    xPos += colWidths[i];
+                }
+                currentY += rowHeight;
             });
             doc.save('weekly_report.pdf');
         }
@@ -433,7 +465,7 @@
 
         // Set default date to today
         document.getElementById('date').valueAsDate = new Date();
-        
+
         // login modal elements
         const loginModal = document.getElementById('loginModal');
         const loginForm = document.getElementById('loginForm');
