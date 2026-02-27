@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lawson Limited Company</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="pic.jpg" alt="logo" style="width: 30px;height: 30px;border-radius: 50%;">
+            <h1> Bitters & Ginger Production </h1>
+            <div id="userDisplay" class="user-display"></div>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('daily', this)">Daily Entry</button>
+            <button class="nav-tab" onclick="showTab('records', this)">All Records</button>
+            <button class="nav-tab" onclick="showTab('weekly', this)">Weekly Report</button>
+        </div>
+
+        <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h2>Sign in with Group Name</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginGroup">Group Section Name:</label>
+                    <input type="text" id="loginGroup" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="submit">Login</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="tab-content">
+            <!-- Daily Entry Tab -->
+            <div id="daily" class="tab-pane active">
+                <h2>📝 Record Daily Production</h2>
+
+                <form id="productionForm">
+
+                    <div class="form-group">
+                        <label for="date">Date:</label>
+                        <input type="date" id="date" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="bittersQuantity">Bitters Produced (drinks):</label>
+                        <input type="number" id="bittersQuantity" step="0.1" min="0" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gingerQuantity">Ginger Produced (drinks):</label>
+                        <input type="number" id="gingerQuantity" step="0.1" min="0" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="employees">Number of Employees Present:</label>
+                        <input type="number" id="employees" min="1" required>
+                    </div>
+
+                    <button type="submit">Save Record</button>
+                </form>
+            </div>
+
+            <!-- All Records Tab -->
+            <div id="records" class="tab-pane">
+                <h2>📋 All Production Records</h2>
+                <div class="action-buttons">
+                    <button class="btn-danger" onclick="clearAllRecords()">Clear All Records</button>
+                </div>
+                <div class="table-container">
+                    <table id="recordsTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Bitters (drinks)</th>
+                                <th>Ginger (drinks)</th>
+                                <th>Employees</th>
+                                <th>Productivity</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recordsBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Weekly Report Tab -->
+            <div id="weekly" class="tab-pane">
+                <h2>📊 Weekly Production Report</h2>
+
+                <div class="week-selector">
+                    <label for="weekSelector">Select Week:</label>
+                    <input type="week" id="weekSelector" required>
+                    <button onclick="generateWeeklyReport()">Generate Report</button>
+                    <button class="btn-success" onclick="printReport()">Download Report</button>
+                </div>
+
+                <div id="weeklyReport"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditModal()">&times;</span>
+            <h2>Update Production Record</h2>
+            <form id="editForm">
+                <div class="form-group">
+                    <label for="editGroupSection">Group Section #:</label>
+                    <input type="text" id="editGroupSection" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="editDate">Date:</label>
+                    <input type="date" id="editDate" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="editBittersQuantity">Bitters Produced (drinks):</label>
+                    <input type="number" id="editBittersQuantity" step="0.1" min="0" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="editGingerQuantity">Ginger Produced (drinks):</label>
+                    <input type="number" id="editGingerQuantity" step="0.1" min="0" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="editEmployees">Number of Employees Present:</label>
+                    <input type="number" id="editEmployees" min="1" required>
+                </div>
+
+                <div class="modal-buttons">
+                    <button type="submit">Save Changes</button>
+                    <button type="button" onclick="closeEditModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</body>
+<!-- jsPDF for PDF generation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="script.js"></script>
+</html>
