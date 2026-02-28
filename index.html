@@ -47,19 +47,45 @@
                         <input type="date" id="date" required>
                     </div>
 
-                    <div class="form-group">
-                        <label for="bittersQuantity">Bitters Produced (drinks):</label>
-                        <input type="number" id="bittersQuantity" step="0.1" min="0" required>
+                    <!-- No Work Day Toggle -->
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="noWorkDay" onchange="toggleNoWorkDay()">
+                            <span>No Work Today</span>
+                        </label>
                     </div>
 
-                    <div class="form-group">
-                        <label for="gingerQuantity">Ginger Produced (drinks):</label>
-                        <input type="number" id="gingerQuantity" step="0.1" min="0" required>
+                    <!-- Reason for no work (shown when no work is checked) -->
+                    <div class="form-group" id="noWorkReasonGroup" style="display: none;">
+                        <label for="noWorkReason">Reason for No Work:</label>
+                        <select id="noWorkReason">
+                            <option value="">Select a reason</option>
+                            <option value="Holiday">Holiday</option>
+                            <option value="Machine Breakdown">Machine Breakdown</option>
+                            <option value="Staff Shortage">Staff Shortage</option>
+                            <option value="Power Outage">Power Outage</option>
+                            <option value="Weather Conditions">Weather Conditions</option>
+                            <option value="Maintenance">Maintenance</option>
+                            <option value="Other">Other</option>
+                        </select>
                     </div>
 
-                    <div class="form-group">
-                        <label for="employees">Number of Employees Present:</label>
-                        <input type="number" id="employees" min="1" required>
+                    <!-- Production inputs (disabled when no work) -->
+                    <div class="production-inputs">
+                        <div class="form-group">
+                            <label for="bittersQuantity">Bitters Produced (drinks):</label>
+                            <input type="number" id="bittersQuantity" step="0.1" min="0" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="gingerQuantity">Ginger Produced (drinks):</label>
+                            <input type="number" id="gingerQuantity" step="0.1" min="0" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="employees">Number of Employees Present:</label>
+                            <input type="number" id="employees" min="1" required>
+                        </div>
                     </div>
 
                     <button type="submit">Save Record</button>
