@@ -1,12 +1,14 @@
- // Initialize local storage
+// Initialize local storage
         let productionRecords = JSON.parse(localStorage.getItem('productionRecords')) || [];
-        // ensure old records have groupSection
+        // ensure old records have groupSection and noWorkDay fields
         productionRecords = productionRecords.map(rec => ({
             groupSection: (rec.groupSection !== undefined && rec.groupSection !== null) ? String(rec.groupSection) : '',
             date: rec.date,
             bittersQuantity: rec.bittersQuantity || 0,
             gingerQuantity: rec.gingerQuantity || 0,
-            employees: rec.employees || 0
+            employees: rec.employees || 0,
+            noWorkDay: rec.noWorkDay || false,
+            noWorkReason: rec.noWorkReason || ''
         }));
         // current user/group name persisted in localStorage
         let currentUser = localStorage.getItem('currentUser') || '';
@@ -16,6 +18,30 @@
         // Save to local storage
         function saveToLocalStorage() {
             localStorage.setItem('productionRecords', JSON.stringify(productionRecords));
+        }
+
+        // Toggle No Work Day - show/hide reason dropdown and enable/disable production inputs
+        function toggleNoWorkDay() {
+            const noWorkDayCheckbox = document.getElementById('noWorkDay');
+            const noWorkReasonGroup = document.getElementById('noWorkReasonGroup');
+            const productionInputs = document.querySelector('.production-inputs');
+            const bittersInput = document.getElementById('bittersQuantity');
+            const gingerInput = document.getElementById('gingerQuantity');
+            const employeesInput = document.getElementById('employees');
+
+            if (noWorkDayCheckbox.checked) {
+                noWorkReasonGroup.style.display = 'block';
+                productionInputs.style.opacity = '0.5';
+                bittersInput.disabled = true;
+                gingerInput.disabled = true;
+                employeesInput.disabled = true;
+            } else {
+                noWorkReasonGroup.style.display = 'none';
+                productionInputs.style.opacity = '1';
+                bittersInput.disabled = false;
+                gingerInput.disabled = false;
+                employeesInput.disabled = false;
+            }
         }
 
         // Show selected tab
@@ -84,9 +110,27 @@
             }
             const groupSection = currentUser; // use logged-in name
             const date = document.getElementById('date').value;
-            const bittersQuantity = parseFloat(document.getElementById('bittersQuantity').value);
-            const gingerQuantity = parseFloat(document.getElementById('gingerQuantity').value);
-            const employees = parseInt(document.getElementById('employees').value);
+            const noWorkDay = document.getElementById('noWorkDay').checked;
+            const noWorkReason = document.getElementById('noWorkReason').value;
+
+            let bittersQuantity, gingerQuantity, employees;
+
+            if (noWorkDay) {
+                // For no work days, set production to 0
+                bittersQuantity = 0;
+                gingerQuantity = 0;
+                employees = 0;
+
+                // Require a reason for no work days
+                if (!noWorkReason) {
+                    showMessage('Please select a reason for no work.', 'error');
+                    return;
+                }
+            } else {
+                bittersQuantity = parseFloat(document.getElementById('bittersQuantity').value);
+                gingerQuantity = parseFloat(document.getElementById('gingerQuantity').value);
+                employees = parseInt(document.getElementById('employees').value);
+            }
 
             // Check if record for this date and group already exists
             const existingRecordIndex = productionRecords.findIndex(record => record.date === date && record.groupSection === groupSection);
@@ -101,7 +145,9 @@
                     date,
                     bittersQuantity,
                     gingerQuantity,
-                    employees
+                    employees,
+                    noWorkDay,
+                    noWorkReason: noWorkDay ? noWorkReason : ''
                 };
             } else {
                 // Add new record
@@ -110,7 +156,9 @@
                     date,
                     bittersQuantity,
                     gingerQuantity,
-                    employees
+                    employees,
+                    noWorkDay,
+                    noWorkReason: noWorkDay ? noWorkReason : ''
                 });
             }
 
@@ -125,6 +173,8 @@
 
             // Reset form
             this.reset();
+            // Reset no work day UI
+            toggleNoWorkDay();
 
             // Refresh records display if on that tab
             if (document.getElementById('records').classList.contains('active')) {
@@ -142,15 +192,23 @@
             }
 
             tbody.innerHTML = productionRecords.map(record => {
-                const productivity = ((record.bittersQuantity + record.gingerQuantity) / record.employees).toFixed(2);
+                let rowClass = '';
+                let statusText = '';
+
+                if (record.noWorkDay) {
+                    rowClass = 'no-work-day';
+                    statusText = `<span class="no-work-badge">🚫 No Work - ${record.noWorkReason}</span>`;
+                }
+
+                const productivity = record.employees > 0 ? ((record.bittersQuantity + record.gingerQuantity) / record.employees).toFixed(2) : '0.00';
 
                 return `
-                    <tr>
-                        <td>${formatDate(record.date)}</td>
-                        <td>${record.bittersQuantity.toFixed(1)} drinks</td>
-                        <td>${record.gingerQuantity.toFixed(1)} drinks</td>
-                        <td>${record.employees}</td>
-                        <td>${productivity} drinks/employee</td>
+                    <tr class="${rowClass}">
+                        <td>${formatDate(record.date)} ${statusText}</td>
+                        <td>${record.noWorkDay ? '-' : record.bittersQuantity.toFixed(1) + ' drinks'}</td>
+                        <td>${record.noWorkDay ? '-' : record.gingerQuantity.toFixed(1) + ' drinks'}</td>
+                        <td>${record.noWorkDay ? '-' : record.employees}</td>
+                        <td>${record.noWorkDay ? 'N/A' : productivity + ' drinks/employee'}</td>
                         <td>
                             <button class="btn-update" onclick="openEditModal(${JSON.stringify(record.date)}, ${JSON.stringify(record.groupSection)})" style="padding: 5px 10px; font-size: 0.9em; margin-right: 5px;">Update</button>
                             <button class="btn-danger" onclick="deleteRecord(${JSON.stringify(record.date)}, ${JSON.stringify(record.groupSection)})" style="padding: 5px 10px; font-size: 0.9em;">Delete</button>
@@ -215,7 +273,9 @@
                     date: newDate,
                     bittersQuantity,
                     gingerQuantity,
-                    employees
+                    employees,
+                    noWorkDay: productionRecords[recordIndex].noWorkDay || false,
+                    noWorkReason: productionRecords[recordIndex].noWorkReason || ''
                 };
 
                 // Sort records by date (and group maybe)
@@ -282,17 +342,21 @@
                 return;
             }
 
-            // Calculate weekly totals
-            const totalBitters = weeklyRecords.reduce((sum, record) => sum + record.bittersQuantity, 0);
-            const totalGinger = weeklyRecords.reduce((sum, record) => sum + record.gingerQuantity, 0);
-            const avgEmployees = (weeklyRecords.reduce((sum, record) => sum + record.employees, 0) / weeklyRecords.length).toFixed(1);
+            // Separate work days and no work days
+            const workDays = weeklyRecords.filter(r => !r.noWorkDay);
+            const noWorkDays = weeklyRecords.filter(r => r.noWorkDay);
 
-            // Calculate daily productivity
-            const dailyProductivity = weeklyRecords.map(record =>
-                ((record.bittersQuantity + record.gingerQuantity) / record.employees).toFixed(2)
+            // Calculate weekly totals (only from work days)
+            const totalBitters = workDays.reduce((sum, record) => sum + record.bittersQuantity, 0);
+            const totalGinger = workDays.reduce((sum, record) => sum + record.gingerQuantity, 0);
+            const avgEmployees = workDays.length > 0 ? (workDays.reduce((sum, record) => sum + record.employees, 0) / workDays.length).toFixed(1) : '0';
+
+            // Calculate daily productivity (only from work days)
+            const dailyProductivity = workDays.map(record =>
+                record.employees > 0 ? ((record.bittersQuantity + record.gingerQuantity) / record.employees).toFixed(2) : '0.00'
             );
 
-            const avgProductivity = (dailyProductivity.reduce((sum, val) => sum + parseFloat(val), 0) / dailyProductivity.length).toFixed(2);
+            const avgProductivity = dailyProductivity.length > 0 ? (dailyProductivity.reduce((sum, val) => sum + parseFloat(val), 0) / dailyProductivity.length).toFixed(2) : '0.00';
 
             // store report data for PDF
             currentWeeklyData = {
@@ -301,7 +365,9 @@
                 totalGinger,
                 avgEmployees,
                 avgProductivity,
-                weeklyRecords
+                weeklyRecords,
+                workDaysCount: workDays.length,
+                noWorkDaysCount: noWorkDays.length
             };
 
             // Generate report HTML
@@ -324,7 +390,44 @@
                         <h3>Avg. Productivity</h3>
                         <div class="value">${avgProductivity} drinks/emp</div>
                     </div>
+                    <div class="summary-card" style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);">
+                        <h3>Work Days</h3>
+                        <div class="value">${workDays.length}</div>
+                    </div>
+                    <div class="summary-card" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                        <h3>No Work Days</h3>
+                        <div class="value">${noWorkDays.length}</div>
+                    </div>
                 </div>
+
+                ${noWorkDays.length > 0 ? `
+                <h3>No Work Days</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>No.</th>
+                                <th>Day</th>
+                                <th>Date</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${noWorkDays.map((record,index) => {
+                                const dayName = new Date(record.date).toLocaleDateString('en-US', { weekday: 'long' });
+                                return `
+                                    <tr class="no-work-day">
+                                        <td>${index+1}</td>
+                                        <td>${dayName}</td>
+                                        <td>${formatDate(record.date)}</td>
+                                        <td>${record.noWorkReason}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                ` : ''}
 
                 <h3>Daily Breakdown</h3>
                 <div class="table-container">
@@ -336,25 +439,25 @@
                                 <th>Date</th>
                                 <th>Bitters (drinks)</th>
                                 <th>Ginger (drinks)</th>
-
                                 <th>Employees</th>
                                 <th>Productivity</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${weeklyRecords.map((record,index) => {
-                                const productivity = ((record.bittersQuantity + record.gingerQuantity) / record.employees).toFixed(2);
+                                const productivity = record.employees > 0 ? ((record.bittersQuantity + record.gingerQuantity) / record.employees).toFixed(2) : '0.00';
                                 const dayName = new Date(record.date).toLocaleDateString('en-US', { weekday: 'long' });
+                                const rowClass = record.noWorkDay ? 'no-work-day' : '';
 
                                 return `
-                                    <tr>
+                                    <tr class="${rowClass}">
                                         <td>${index+1}</td>
                                         <td>${dayName}</td>
                                         <td>${formatDate(record.date)}</td>
-                                        <td>${record.bittersQuantity.toFixed(1)} drinks</td>
-                                        <td>${record.gingerQuantity.toFixed(1)} drinks</td>
-                                        <td>${record.employees}</td>
-                                        <td>${productivity} drinks/emp</td>
+                                        <td>${record.noWorkDay ? '-' : record.bittersQuantity.toFixed(1) + ' drinks'}</td>
+                                        <td>${record.noWorkDay ? '-' : record.gingerQuantity.toFixed(1) + ' drinks'}</td>
+                                        <td>${record.noWorkDay ? '-' : record.employees}</td>
+                                        <td>${record.noWorkDay ? 'N/A' : productivity + ' drinks/emp'}</td>
                                     </tr>
                                 `;
                             }).join('')}
@@ -398,6 +501,10 @@
             doc.text(`Avg. Employees: ${currentWeeklyData.avgEmployees}`, 20, y);
             y += 7;
             doc.text(`Avg. Productivity: ${currentWeeklyData.avgProductivity} drinks/emp`, 20, y);
+            y += 7;
+            doc.text(`Work Days: ${currentWeeklyData.workDaysCount}`, 20, y);
+            y += 7;
+            doc.text(`No Work Days: ${currentWeeklyData.noWorkDaysCount}`, 20, y);
             y += 10;
             doc.setFontSize(14);
             doc.text('Daily Breakdown', 20, y);
@@ -407,8 +514,8 @@
             // Table configuration
             const tableStartX = 8;
             const tableStartY = y;
-            const colWidths = [12, 20, 38, 28, 28, 38, 20]; // No., Day, Date, Bitters, Ginger, Employees, Prod.
-            const colLabels = ['No.', 'Day', 'Date', 'Bitters', 'Ginger', 'Employees', 'Prod.'];
+            const colWidths = [12, 20, 38, 28, 28, 20, 25]; // No., Day, Date, Bitters, Ginger, Employees, Prod.
+            const colLabels = ['No.', 'Day', 'Date', 'Bitters', 'Ginger', 'Emp', 'Prod.'];
             const rowHeight = 7;
             let currentY = tableStartY;
 
@@ -438,14 +545,20 @@
                     currentY = 20;
                 }
                 const dayName = new Date(rec.date).toLocaleDateString('en-US', { weekday: 'short' });
+                const productivity = rec.employees > 0 ? ((rec.bittersQuantity + rec.gingerQuantity) / rec.employees).toFixed(2) : '0.00';
+                const bittersText = rec.noWorkDay ? '-' : rec.bittersQuantity.toFixed(1);
+                const gingerText = rec.noWorkDay ? '-' : rec.gingerQuantity.toFixed(1);
+                const employeesText = rec.noWorkDay ? '-' : rec.employees.toString();
+                const prodText = rec.noWorkDay ? 'N/A' : productivity;
+
                 const rowData = [
                     (index+1).toString(),
                     dayName,
                     formatDate(rec.date),
-                    rec.bittersQuantity.toFixed(1),
-                    rec.gingerQuantity.toFixed(1),
-                    rec.employees.toString(),
-                    ((rec.bittersQuantity + rec.gingerQuantity) / rec.employees).toFixed(2)
+                    bittersText,
+                    gingerText,
+                    employeesText,
+                    prodText
                 ];
 
                 // Draw cell borders and text
